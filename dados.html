@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>FLUXO — Sistema de Dados</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+    body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+    .container { max-width:850px; margin:auto; }
+    h2, h3 { text-align:center; }
+    .card { background:#1c1c1c; padding:15px; border-radius:10px; margin-bottom:20px; }
+    button { width:100%; padding:12px; margin-top:8px; font-size:16px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; }
+    button:hover { opacity:0.9; }
+    .status-box { white-space:pre-line; background:#0f0f0f; padding:10px; border-radius:8px; margin-top:10px; font-family:monospace; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h2>FLUXO — Sistema de Dados</h2>
+
+<a href="index.html">
+<button style="background:#1976d2;">⬅ Voltar para Batalha</button>
+</a>
+
+<div class="card">
+    <h3>Rolar Dados</h3>
+
+    <button onclick="rolarD6()" style="background:#6a1b9a;">🎲 Rolar D6</button>
+    <button onclick="rolarD20()" style="background:#c62828;">🎲 Rolar D20</button>
+    <button onclick="limparHistorico()" style="background:#555;">🧹 Limpar História</button>
+
+    <div id="areaDado" style="text-align:center; margin-top:20px;">
+        <img id="imagemDado" src="imagens/d6_1.png" style="width:180px;">
+        <div id="numeroD20" style="
+            font-size:52px;
+            font-weight:900;
+            color:white;
+            position:relative;
+            top:-120px;
+            display:none;
+            text-shadow:2px 2px 4px black;
+        "></div>
+    </div>
+
+    <h3>Histórico</h3>
+    <div id="historicoDados" class="status-box">Nenhuma rolagem ainda.</div>
+</div>
+
+</div>
+
+<script>
+/* ==========================
+        SISTEMA DE DADOS
+========================== */
+let historico = JSON.parse(localStorage.getItem("historicoDadosFluxo") || "[]");
+
+function rolar(max){ return Math.floor(Math.random()*max)+1; }
+
+/* -----------------------------
+             D6
+----------------------------- */
+function rolarD6(){
+    const img = document.getElementById("imagemDado");
+    const num = document.getElementById("numeroD20");
+    num.style.display = "none";
+
+    img.src = "imagens/rolando_d6.gif";
+
+    setTimeout(()=>{
+        const valor = rolar(6);
+        img.src = `imagens/d6_${valor}.png`;
+        registrar(`D6: ${valor}`);
+    },1000);
+}
+
+/* -----------------------------
+             D20
+----------------------------- */
+function rolarD20(){
+    const img = document.getElementById("imagemDado");
+    const num = document.getElementById("numeroD20");
+
+    num.style.display = "none";
+    img.src = "imagens/rolando_d20.gif";
+
+    setTimeout(()=>{
+        const valor = rolar(20);
+        img.src = "imagens/dado_d20.png";
+        num.innerText = valor;
+        num.style.display = "block";
+        registrar(`D20: ${valor}`);
+    },1000);
+}
+
+/* -----------------------------
+         HISTÓRICO
+----------------------------- */
+function registrar(texto){
+    historico.unshift(`${new Date().toLocaleTimeString()} • ${texto}`);
+    if (historico.length > 30) historico.pop();
+    salvarHist();
+}
+
+function salvarHist(){
+    localStorage.setItem("historicoDadosFluxo", JSON.stringify(historico));
+    atualizarHistorico();
+}
+
+function atualizarHistorico(){
+    const box = document.getElementById("historicoDados");
+    if (!historico.length){
+        box.innerText = "Nenhuma rolagem ainda.";
+        return;
+    }
+    box.innerText = historico.map(i=>"• "+i).join("\n");
+}
+
+function limparHistorico(){
+    if (!confirm("Apagar histórico?")) return;
+    historico = [];
+    salvarHist();
+    document.getElementById("imagemDado").src = "imagens/d6.png";
+    document.getElementById("numeroD20").style.display = "none";
+}
+
+atualizarHistorico();
+</script>
+
+</body>
+</html>

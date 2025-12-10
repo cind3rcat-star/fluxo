@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Batalha</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+
+    body { background:#111; color:white; font-family:Arial; padding:20px; }
+    .card { background:#1e1e1e; padding:20px; border-radius:10px; margin-bottom:25px; }
+
+    select, button { padding:10px; border:none; border-radius:6px; margin-top:10px; width:100%; }
+
+    .btn { background:#444; color:white; }
+    .btn:hover { background:#555; }
+
+    #log { white-space:pre-line; background:#000; padding:15px; border-radius:10px; height:220px; overflow-y:auto; }
+
+    /* D20 */
+    #d20-container {
+        position: relative;
+        width: 150px;
+        margin: 0 auto;
+    }
+
+    #d20-img {
+        width: 100%;
+        display: block;
+    }
+
+    #d20-numero {
+        position: absolute;
+        top: 55%;     /* ajustado para ficar mais embaixo */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 36px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 2px 2px 3px black;
+        pointer-events: none;
+    }
+
+    /* D6 image size */
+    #d6-img { width: 120px; display:block; margin: 0 auto; }
+
+</style>
+
+<script src="js/personagens.js"></script>
+
+</head>
+<body>
+
+<h2>Sistema de Batalha</h2>
+<p><a href="cadastro.html" style="color:#4fc3f7;">Ir para Cadastro →</a></p>
+
+<!-- ============================= -->
+<!-- SELEÇÃO DE ATACANTE / DEFENSOR -->
+<!-- ============================= -->
+<div class="card">
+    <h3>Combatentes</h3>
+
+    <label>Atacante:</label>
+    <select id="atacante"></select>
+
+    <label>Defensor:</label>
+    <select id="defensor"></select>
+
+    <button class="btn" onclick="atacar()">Atacar</button>
+
+    <button class="btn" style="background:#1976d2;" onclick="resetarBatalha()">Reiniciar Vidas da Batalha</button>
+</div>
+
+<!-- ============================= -->
+<!-- LOG DA BATALHA -->
+<!-- ============================= -->
+<div class="card">
+    <h3>Log da Batalha</h3>
+    <div id="log"></div>
+</div>
+
+<!-- ============================= -->
+<!-- SISTEMA DE DADOS -->
+<!-- ============================= -->
+<div class="card">
+    <h2 style="text-align:center;">Sistema de Dados</h2>
+
+    <!-- D6 -->
+    <h3>D6</h3>
+    <div style="text-align:center;">
+        <img id="d6-img" src="imagens/d6.png" alt="d6">
+        <button class="btn" onclick="rolarD6()">Rolar D6</button>
+    </div>
+
+    <br>
+
+    <!-- D20 -->
+    <h3>D20</h3>
+    <div id="d20-container">
+        <img id="d20-img" src="imagens/dado_d20.png" alt="d20">
+        <div id="d20-numero"></div>
+    </div>
+
+    <button class="btn" onclick="rolarD20()">Rolar D20</button>
+
+    <button class="btn" style="background:#c62828;" onclick="limparHistorico()">Limpar Histórico de Dados</button>
+
+    <p id="historico"></p>
+</div>
+
+<script>
+// =============================
+// VIDAS TEMPORÁRIAS DA BATALHA
+// =============================
+let vidasBatalha = {}; // id : vida atual
+
+// =============================
+// CARREGAR PERSONAGENS
+// =============================
+function carregarPersonagens() {
+    const lista = getPersonagens();
+
+    const atac = document.getElementById("atacante");
+    const def  = document.getElementById("defensor");
+
+    atac.innerHTML = "";
+    def.innerHTML  = "";
+
+    lista.forEach(p => {
+
+        if (vidasBatalha[p.id] === undefined) vidasBatalha[p.id] = Number(p.vida);
+
+        const morto = vidasBatalha[p.id] <= 0;
+
+        // preserva estética: texto simples com (MORTO) e opção desabilitada
+        atac.innerHTML += `<option value="${p.id}" ${morto ? "disabled" : ""}>${p.nome} ${morto ? "(MORTO)" : ""}</option>`;
+        def.innerHTML  += `<option value="${p.id}" ${morto ? "disabled" : ""}>${p.nome} ${morto ? "(MORTO)" : ""}</option>`;
+    });
+}
+
+// =============================
+// ARREDONDAMENTO ESPECIAL
+// regra: arredonda normalmente, exceto se terminar em .5 -> mantem .5
+// =============================
+function arredondarEspecial(v) {
+    const rounded = Math.round(v);
+    const frac = Math.abs(v - Math.trunc(v));
+    // se terminar exatamente em .5 (considerando floats): mantem v
+    if (Math.abs(frac - 0.5) < 1e-9) return v;
+    return rounded;
+}
+
+// =============================
+// TABELA MITIGAÇÃO
+// =============================
+function chanceMitigacao(agi) {
+    if (agi >= 801) return 80;
+    if (agi >= 501) return 65;
+    if (agi >= 301) return 40;
+    if (agi >= 100) return 25;
+    return 0;
+}
+
+// =============================
+// ATAQUE
+// =============================
+function atacar() {
+
+    const lista = getPersonagens();
+
+    const idAtk = Number(document.getElementById("atacante").value);
+    const idDef = Number(document.getElementById("defensor").value);
+
+    if (!idAtk || !idDef) { alert("Escolha atacante e defensor."); return; }
+    if (idAtk === idDef) { alert("Escolha personagens diferentes!"); return; }
+
+    const atk = lista.find(p => p.id === idAtk);
+    const def = lista.find(p => p.id === idDef);
+
+    if (!atk || !def) { alert("Personagem não encontrado."); return; }
+    if (vidasBatalha[atk.id] <= 0 || vidasBatalha[def.id] <= 0) { alert("Um dos personagens está morto."); return; }
+
+    // CHANCE DE MITIGAÇÃO (com base na tabela)
+    const chance = chanceMitigacao(Number(def.agilidade));
+    const ativou = Math.random() * 100 < chance;
+
+    // RAZÃO
+    let razao = (0.20 * Number(def.agilidade)) / (Number(def.agilidade) + Number(atk.agilidade));
+    // Não arredondamos a razão ainda para cálculo — usaremos arredondarEspecial para exibir quando necessário
+
+    // DANO RECEBIDO: se MITIGAÇÃO ativada -> Ataque * (1 - Razao)
+    //                se NÃO ativada -> Ataque (dano completo)
+    let danoRecebido;
+    if (ativou) {
+        danoRecebido = Number(atk.dano) * (1 - razao);
+    } else {
+        danoRecebido = Number(atk.dano); // dano completo
+    }
+
+    // aplicar regra de arredondamento especial
+    // manter .5 exato, caso contrário Math.round
+    const danoFinal = arredondarEspecial(Number(danoRecebido));
+
+    // aplicar dano na vida temporária (apenas sessão)
+    vidasBatalha[def.id] = Number(vidasBatalha[def.id]) - Number(danoFinal);
+    if (vidasBatalha[def.id] < 0) vidasBatalha[def.id] = 0;
+
+    // LOG detalhado
+    const log = document.getElementById("log");
+
+    const razaoPct = razao * 100;
+    const razaoExib = arredondarEspecial(razaoPct); // exibir porcentagem com regra especial
+
+    log.innerHTML =
+        `--- ATAQUE ---\n` +
+        `${atk.nome} atacou ${def.nome}\n` +
+        `Chance de Mitigar (pela tabela): ${chance}%\n` +
+        `Mitigação ativada? ${ativou ? "SIM" : "NÃO"}\n` +
+        `Razão (para cálculo): ${Number(razao).toFixed(4)} (${razaoExib}%)\n` +
+        `Dano recebido calculado: ${danoRecebido}\n` +
+        `Dano final (após arredondamento especial): ${danoFinal}\n` +
+        `Vida restante do defensor: ${vidasBatalha[def.id]}\n\n` +
+        log.innerHTML;
+
+    // marcar morto apenas na sessão (opções serão desabilitadas por carregarPersonagens)
+    // atualizar selects
+    carregarPersonagens();
+}
+
+// =============================
+// RESETAR BATALHA
+// =============================
+function resetarBatalha() {
+    const lista = getPersonagens();
+    vidasBatalha = {};
+    lista.forEach(p => { vidasBatalha[p.id] = Number(p.vida); });
+    document.getElementById("log").innerHTML = "";
+    carregarPersonagens();
+}
+
+// =============================
+// D6 (com gif)
+// =============================
+function rolarD6() {
+    const img = document.getElementById("d6-img");
+    // gif de rolagem
+    img.src = "imagens/rolando_d6.gif";
+
+    setTimeout(() => {
+        const n = Math.floor(Math.random() * 6) + 1;
+        img.src = `imagens/d6_${n}.png`;
+        document.getElementById("historico").innerHTML += `D6: ${n}<br>`;
+    }, 900);
+}
+
+// =============================
+// D20 (com gif e número sobreposto)
+// =============================
+function rolarD20() {
+    const img = document.getElementById("d20-img");
+    const num = document.getElementById("d20-numero");
+
+    num.innerText = "";
+    img.src = "imagens/rolando_d20.gif";
+
+    setTimeout(() => {
+        const n = Math.floor(Math.random() * 20) + 1;
+        img.src = "imagens/dado_d20.png";
+        num.innerText = n;
+        document.getElementById("historico").innerHTML += `D20: ${n}<br>`;
+    }, 900);
+}
+
+// LIMPAR HISTÓRICO
+function limparHistorico() {
+    document.getElementById("historico").innerHTML = "";
+}
+
+// Inicializa
+carregarPersonagens();
+
+</script>
+
+</body>
+</html>
