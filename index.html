@@ -87,7 +87,7 @@
     <!-- D6 -->
     <h3>D6</h3>
     <div style="text-align:center;">
-        <img id="d6-img" src="imagens/d6.png" alt="d6">
+        <img id="d6-img" src="d6.png" alt="d6">
         <button class="btn" onclick="rolarD6()">Rolar D6</button>
     </div>
 
@@ -96,7 +96,7 @@
     <!-- D20 -->
     <h3>D20</h3>
     <div id="d20-container">
-        <img id="d20-img" src="imagens/dado_d20.png" alt="d20">
+        <img id="d20-img" src="dado_d20.png" alt="d20">
         <div id="d20-numero"></div>
     </div>
 
@@ -243,11 +243,11 @@ function resetarBatalha() {
 function rolarD6() {
     const img = document.getElementById("d6-img");
     // gif de rolagem
-    img.src = "imagens/rolando_d6.gif";
+    img.src = "rolando_d6.gif";
 
     setTimeout(() => {
         const n = Math.floor(Math.random() * 6) + 1;
-        img.src = `imagens/d6_${n}.png`;
+        img.src = `d6_${n}.png`;
         document.getElementById("historico").innerHTML += `D6: ${n}<br>`;
     }, 900);
 }
@@ -260,11 +260,11 @@ function rolarD20() {
     const num = document.getElementById("d20-numero");
 
     num.innerText = "";
-    img.src = "imagens/rolando_d20.gif";
+    img.src = "rolando_d20.gif";
 
     setTimeout(() => {
         const n = Math.floor(Math.random() * 20) + 1;
-        img.src = "imagens/dado_d20.png";
+        img.src = "dado_d20.png";
         num.innerText = n;
         document.getElementById("historico").innerHTML += `D20: ${n}<br>`;
     }, 900);
@@ -282,3 +282,4 @@ carregarPersonagens();
 
 </body>
 </html>
+
