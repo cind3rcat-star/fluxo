@@ -32,7 +32,7 @@
     <button onclick="limparHistorico()" style="background:#555;">🧹 Limpar História</button>
 
     <div id="areaDado" style="text-align:center; margin-top:20px;">
-        <img id="imagemDado" src="imagens/d6_1.png" style="width:180px;">
+        <img id="imagemDado" src="d6_1.png" style="width:180px;">
         <div id="numeroD20" style="
             font-size:52px;
             font-weight:900;
@@ -66,11 +66,11 @@ function rolarD6(){
     const num = document.getElementById("numeroD20");
     num.style.display = "none";
 
-    img.src = "imagens/rolando_d6.gif";
+    img.src = "rolando_d6.gif";
 
     setTimeout(()=>{
         const valor = rolar(6);
-        img.src = `imagens/d6_${valor}.png`;
+        img.src = `d6_${valor}.png`;
         registrar(`D6: ${valor}`);
     },1000);
 }
@@ -83,7 +83,7 @@ function rolarD20(){
     const num = document.getElementById("numeroD20");
 
     num.style.display = "none";
-    img.src = "imagens/rolando_d20.gif";
+    img.src = "rolando_d20.gif";
 
     setTimeout(()=>{
         const valor = rolar(20);
@@ -130,3 +130,4 @@ atualizarHistorico();
 
 </body>
 </html>
+
