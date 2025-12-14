@@ -5,13 +5,13 @@
 <title>FLUXO — Sistema de Dados</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-    body { background:#111; color:#fff; font-family:Arial; padding:20px; }
-    .container { max-width:850px; margin:auto; }
-    h2, h3 { text-align:center; }
-    .card { background:#1c1c1c; padding:15px; border-radius:10px; margin-bottom:20px; }
-    button { width:100%; padding:12px; margin-top:8px; font-size:16px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; }
-    button:hover { opacity:0.9; }
-    .status-box { white-space:pre-line; background:#0f0f0f; padding:10px; border-radius:8px; margin-top:10px; font-family:monospace; }
+body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+.container { max-width:850px; margin:auto; }
+h2, h3 { text-align:center; }
+.card { background:#1c1c1c; padding:15px; border-radius:10px; margin-bottom:20px; }
+button { width:100%; padding:12px; margin-top:8px; font-size:16px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; }
+button:hover { opacity:0.9; }
+.status-box { white-space:pre-line; background:#0f0f0f; padding:10px; border-radius:8px; margin-top:10px; font-family:monospace; }
 </style>
 </head>
 <body>
@@ -51,23 +51,15 @@
 </div>
 
 <script>
-/* ==========================
-        SISTEMA DE DADOS
-========================== */
 let historico = JSON.parse(localStorage.getItem("historicoDadosFluxo") || "[]");
 
 function rolar(max){ return Math.floor(Math.random()*max)+1; }
 
-/* -----------------------------
-             D6
------------------------------ */
 function rolarD6(){
     const img = document.getElementById("imagemDado");
     const num = document.getElementById("numeroD20");
     num.style.display = "none";
-
     img.src = "rolando_d6.gif";
-
     setTimeout(()=>{
         const valor = rolar(6);
         img.src = `d6_${valor}.png`;
@@ -75,31 +67,23 @@ function rolarD6(){
     },1000);
 }
 
-/* -----------------------------
-             D20
------------------------------ */
 function rolarD20(){
     const img = document.getElementById("imagemDado");
     const num = document.getElementById("numeroD20");
-
     num.style.display = "none";
     img.src = "rolando_d20.gif";
-
     setTimeout(()=>{
         const valor = rolar(20);
-        img.src = "imagens/dado_d20.png";
+        img.src = "dado_d20.png";
         num.innerText = valor;
         num.style.display = "block";
         registrar(`D20: ${valor}`);
     },1000);
 }
 
-/* -----------------------------
-         HISTÓRICO
------------------------------ */
 function registrar(texto){
     historico.unshift(`${new Date().toLocaleTimeString()} • ${texto}`);
-    if (historico.length > 30) historico.pop();
+    if(historico.length>30) historico.pop();
     salvarHist();
 }
 
@@ -110,19 +94,16 @@ function salvarHist(){
 
 function atualizarHistorico(){
     const box = document.getElementById("historicoDados");
-    if (!historico.length){
-        box.innerText = "Nenhuma rolagem ainda.";
-        return;
-    }
+    if(!historico.length){ box.innerText = "Nenhuma rolagem ainda."; return; }
     box.innerText = historico.map(i=>"• "+i).join("\n");
 }
 
 function limparHistorico(){
-    if (!confirm("Apagar histórico?")) return;
-    historico = [];
+    if(!confirm("Apagar histórico?")) return;
+    historico=[];
     salvarHist();
-    document.getElementById("imagemDado").src = "d6.png";
-    document.getElementById("numeroD20").style.display = "none";
+    document.getElementById("imagemDado").src="d6_1.png";
+    document.getElementById("numeroD20").style.display="none";
 }
 
 atualizarHistorico();
@@ -130,5 +111,3 @@ atualizarHistorico();
 
 </body>
 </html>
-
-
