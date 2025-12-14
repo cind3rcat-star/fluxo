@@ -2,99 +2,131 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Cadastro de Personagens</title>
+<title>Cadastro - Fluxo TCG</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body { background:#111; color:white; font-family:Arial; padding:20px; }
-.card { background:#1e1e1e; padding:20px; border-radius:10px; margin-bottom:25px; }
-input { width:100%; padding:10px; margin:6px 0; border-radius:6px; border:none; }
-button { padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
-table { width:100%; margin-top:20px; border-collapse:collapse; }
-td, th { padding:12px; border-bottom:1px solid #333; }
-th { background:#222; }
-a { color:#4fc3f7; text-decoration:none; }
+.card { background:#1e1e1e; padding:20px; border-radius:10px; margin-bottom:20px; }
+input, button, select { width:100%; padding:10px; margin-top:10px; border:none; border-radius:6px; }
+.btn { background:#444; color:white; }
+.btn:hover { background:#555; }
+.danger { background:#c62828; }
+
+.catalogo {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:15px;
+}
+.carta {
+  background:#121212;
+  padding:12px;
+  border-radius:10px;
+}
+.carta h4 { margin:0 0 8px 0; color:#4fc3f7; }
 </style>
+
+<script src="personagens_fixos.js"></script>
+<script src="personagens.js"></script>
 </head>
+
 <body>
 
-<h2>Cadastro de Personagens</h2>
-<p><a href="index.html">⬅ Voltar para Batalha</a></p>
+<h2>Cadastro</h2>
+<p><a href="index.html" style="color:#4fc3f7;">← Voltar</a></p>
 
 <div class="card">
-    <h3>Novo Personagem</h3>
-    <input id="nome" placeholder="Nome">
-    <input id="vida" type="number" placeholder="Vida">
-    <input id="dano" type="number" placeholder="Dano">
-    <input id="agilidade" type="number" placeholder="Agilidade">
-    <button style="background:#4caf50; width:100%;" onclick="criarPersonagem()">Salvar</button>
+<h3>📘 Catálogo de Personagens Fixos</h3>
+<div id="catalogo" class="catalogo"></div>
 </div>
 
 <div class="card">
-    <h3>Lista de Personagens</h3>
-    <table id="tabela"></table>
+<h3>Novo Personagem</h3>
+<input id="nome" placeholder="Nome">
+<input id="dano" type="number" placeholder="Dano">
+<input id="vida" type="number" placeholder="Vida">
+<input id="agilidade" type="number" placeholder="Agilidade">
+<button class="btn" onclick="criar()">Cadastrar</button>
 </div>
 
-<script src="personagens.js"></script>
+<div class="card">
+<h3>Editar / Excluir Personagem Custom</h3>
+<select id="lista" size="6" onchange="selecionar()"></select>
+<input id="eNome">
+<input id="eDano" type="number">
+<input id="eVida" type="number">
+<input id="eAgilidade" type="number">
+<button class="btn" onclick="salvar()">Salvar</button>
+<button class="btn danger" onclick="excluir()">Excluir</button>
+</div>
+
 <script>
-function adicionarNaBatalha(id) {
-    const personagens = getPersonagens();
-    const batalha = JSON.parse(localStorage.getItem("fluxo_batalha") || "[]");
-    const personagem = personagens.find(p => p.id === id);
-    if (!personagem) return alert("Erro: Personagem não encontrado!");
-    batalha.push(personagem);
-    localStorage.setItem("fluxo_batalha", JSON.stringify(batalha));
-    alert(`⚔️ ${personagem.nome} foi adicionado à batalha!`);
-}
+let selecionado = null;
 
-function criarPersonagem() {
-    const p = {
-        nome: nome.value.trim(),
-        vida: Number(vida.value),
-        dano: Number(dano.value),
-        agilidade: Number(agilidade.value)
-    };
-    if (!p.nome || !p.vida || !p.dano || !p.agilidade) return alert("Preencha todos os campos!");
-    addPersonagem(p);
-    listar();
-    nome.value = vida.value = dano.value = agilidade.value = "";
-}
-
-function remover(id) {
-    if (confirm("Excluir personagem?")) {
-        deletePersonagem(id);
-        listar();
-    }
-}
-
-function editar(id) {
-    const novoNome = prompt("Novo nome:");
-    if (!novoNome) return;
-    updatePersonagem(id, { nome: novoNome });
-    listar();
-}
-
-function listar() {
-    const tabela = document.getElementById("tabela");
-    const lista = getPersonagens();
-    tabela.innerHTML = `
-        <tr>
-            <th>Nome</th><th>Vida</th><th>Dano</th><th>Agilidade</th><th>Ações</th>
-        </tr>`;
-    lista.forEach(p => {
-        tabela.innerHTML += `
-            <tr>
-                <td>${p.nome}</td><td>${p.vida}</td><td>${p.dano}</td><td>${p.agilidade}</td>
-                <td>
-                    <button onclick="editar(${p.id})" style="background:#1976d2;">Editar</button>
-                    <button onclick="remover(${p.id})" style="background:#c62828;">Excluir</button>
-                    <button onclick="adicionarNaBatalha(${p.id})" style="background:#43a047;">⚔️ Batalhar</button>
-                </td>
-            </tr>`;
+function carregarCatalogo() {
+    catalogo.innerHTML = "";
+    PERSONAGENS_FIXOS.forEach(p => {
+        catalogo.innerHTML += `
+        <div class="carta">
+            <h4>${p.nome}</h4>
+            ⚔️ Dano: ${p.dano}<br>
+            ❤️ Vida: ${p.vida}<br>
+            ⚡ Agilidade: ${p.agilidade}
+        </div>`;
     });
 }
 
-listar();
+function carregarLista() {
+    lista.innerHTML = "";
+    getPersonagens().filter(p => p.id >= 1000).forEach(p => {
+        lista.innerHTML += `<option value="${p.id}">${p.nome}</option>`;
+    });
+}
+
+function criar() {
+    adicionarPersonagem({
+        nome: nome.value,
+        dano: +dano.value,
+        vida: +vida.value,
+        agilidade: +agilidade.value
+    });
+    nome.value = dano.value = vida.value = agilidade.value = "";
+    carregarLista();
+}
+
+function selecionar() {
+    const p = getPersonagens().find(p => p.id == lista.value);
+    if (!p) return;
+    selecionado = p.id;
+    eNome.value = p.nome;
+    eDano.value = p.dano;
+    eVida.value = p.vida;
+    eAgilidade.value = p.agilidade;
+}
+
+function salvar() {
+    if (!selecionado) return;
+    editarPersonagem(selecionado, {
+        nome: eNome.value,
+        dano: +eDano.value,
+        vida: +eVida.value,
+        agilidade: +eAgilidade.value
+    });
+    carregarLista();
+}
+
+function excluir() {
+    if (!selecionado) return;
+    removerPersonagem(selecionado);
+    selecionado = null;
+    carregarLista();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    carregarCatalogo();
+    carregarLista();
+});
 </script>
+
 </body>
 </html>
-
