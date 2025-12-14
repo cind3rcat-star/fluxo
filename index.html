@@ -2,30 +2,22 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Batalha</title>
+<title>Fluxo TCG - Batalha</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
 body { background:#111; color:white; font-family:Arial; padding:20px; }
 .card { background:#1e1e1e; padding:20px; border-radius:10px; margin-bottom:25px; }
-select, button { padding:10px; border:none; border-radius:6px; margin-top:10px; width:100%; }
-.btn { background:#444; color:white; }
+select, button, input { padding:10px; border:none; border-radius:6px; margin-top:10px; width:100%; }
+.btn { background:#444; color:white; cursor:pointer; }
 .btn:hover { background:#555; }
 #log { white-space:pre-line; background:#000; padding:15px; border-radius:10px; height:220px; overflow-y:auto; }
-
-/* D20 */
 #d20-container { position: relative; width: 150px; margin: 0 auto; }
-#d20-img { width: 100%; display: block; }
-#d20-numero {
-    position: absolute; top: 55%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 36px; font-weight: bold; color: white;
-    text-shadow: 2px 2px 3px black; pointer-events: none;
-}
-/* D6 */
-#d6-img { width: 120px; display:block; margin: 0 auto; }
+#d20-img { width: 100%; }
+#d20-numero { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; font-weight: bold; color: white; text-shadow: 2px 2px 3px black; pointer-events: none; }
+#d6-img { width: 120px; display: block; margin: 0 auto; }
 </style>
 
+<script src="personagens_fixos.js"></script>
 <script src="personagens.js"></script>
 </head>
 <body>
@@ -33,112 +25,230 @@ select, button { padding:10px; border:none; border-radius:6px; margin-top:10px; 
 <h2>Sistema de Batalha</h2>
 <p><a href="cadastro.html" style="color:#4fc3f7;">Ir para Cadastro →</a></p>
 
+<!-- COMBATENTES -->
 <div class="card">
     <h3>Combatentes</h3>
-    <label>Atacante:</label>
+    <label>Atacante</label>
     <select id="atacante"></select>
-    <label>Defensor:</label>
+    <label>Defensor</label>
     <select id="defensor"></select>
     <button class="btn" onclick="atacar()">Atacar</button>
-    <button class="btn" style="background:#1976d2;" onclick="resetarBatalha()">Reiniciar Vidas da Batalha</button>
+    <button class="btn" style="background:#1976d2;" onclick="resetarBatalha()">Reiniciar Batalha</button>
 </div>
 
+<!-- PAINEL DE BUFFS / NERFS -->
+<div class="card">
+    <h3>Buffs / Nerfs Dinâmicos</h3>
+    <label>Personagem</label>
+    <select id="selPersonagem"></select>
+    <label>Dano</label>
+    <input type="number" id="inputDano" value="0">
+    <label>Vida</label>
+    <input type="number" id="inputVida" value="0">
+    <label>Agilidade</label>
+    <input type="number" id="inputAgi" value="0">
+    <button class="btn" onclick="aplicarBuffDoPainel()">Aplicar Buff/Nerf</button>
+    <h4>Buffs Ativos</h4>
+    <div id="buffsAtivos"></div>
+</div>
+
+<!-- LOG -->
 <div class="card">
     <h3>Log da Batalha</h3>
     <div id="log"></div>
 </div>
 
+<!-- SISTEMA DE DADOS -->
 <div class="card">
     <h2 style="text-align:center;">Sistema de Dados</h2>
     <h3>D6</h3>
-    <div style="text-align:center;">
-        <img id="d6-img" src="d6.png" alt="d6">
-        <button class="btn" onclick="rolarD6()">Rolar D6</button>
-    </div>
-
-    <br>
-
+    <img id="d6-img" src="d6.png">
+    <button class="btn" onclick="rolarD6()">Rolar D6</button>
     <h3>D20</h3>
     <div id="d20-container">
-        <img id="d20-img" src="dado_d20.png" alt="d20">
+        <img id="d20-img" src="dado_d20.png">
         <div id="d20-numero"></div>
     </div>
-
     <button class="btn" onclick="rolarD20()">Rolar D20</button>
-    <button class="btn" style="background:#c62828;" onclick="limparHistorico()">Limpar Histórico</button>
+    <button class="btn" style="background:#c62828;" onclick="limparHistorico()">Limpar Histórico de Dados</button>
     <p id="historico"></p>
 </div>
 
 <script>
 // =============================
-// Batalha
+// ESTADO DA BATALHA
 // =============================
 let vidasBatalha = {};
+let buffs = {};
 
+// =============================
+// CARREGAR PERSONAGENS
+// =============================
 function carregarPersonagens() {
     const lista = getPersonagens();
-    const atac = document.getElementById("atacante");
-    const def  = document.getElementById("defensor");
-    atac.innerHTML = ""; def.innerHTML = "";
+    const selAtk = document.getElementById("atacante");
+    const selDef = document.getElementById("defensor");
+    selAtk.innerHTML = "";
+    selDef.innerHTML = "";
 
     lista.forEach(p => {
         if (vidasBatalha[p.id] === undefined) vidasBatalha[p.id] = Number(p.vida);
-        const morto = vidasBatalha[p.id] <= 0;
-        atac.innerHTML += `<option value="${p.id}" ${morto?"disabled":""}>${p.nome} ${morto?"(MORTO)":""}</option>`;
-        def.innerHTML  += `<option value="${p.id}" ${morto?"disabled":""}>${p.nome} ${morto?"(MORTO)":""}</option>`;
+
+        const buff = buffs[p.id] || { vida:0, dano:0, agilidade:0 };
+        const vidaTotal = vidasBatalha[p.id] + buff.vida;
+        const danoTotal = p.dano + buff.dano;
+        const agiTotal = p.agilidade + buff.agilidade;
+        const morto = vidaTotal <= 0;
+
+        const texto = `${p.nome} ${morto ? "(MORTO)" : ""} — ❤️ ${vidaTotal} | ⚔️ ${danoTotal} | ⚡ ${agiTotal}`;
+
+        const optionAtk = document.createElement("option");
+        optionAtk.value = p.id;
+        optionAtk.disabled = morto;
+        optionAtk.textContent = texto;
+
+        const optionDef = document.createElement("option");
+        optionDef.value = p.id;
+        optionDef.disabled = morto;
+        optionDef.textContent = texto;
+
+        selAtk.appendChild(optionAtk);
+        selDef.appendChild(optionDef);
     });
 }
 
-function arredondarEspecial(v) {
-    const rounded = Math.round(v);
-    const frac = Math.abs(v - Math.trunc(v));
-    if (Math.abs(frac - 0.5) < 1e-9) return v;
-    return rounded;
-}
-
+// =============================
+// MITIGAÇÃO
+// =============================
 function chanceMitigacao(agi) {
-    if (agi >= 801) return 80;
-    if (agi >= 501) return 65;
-    if (agi >= 301) return 40;
+    if (agi >= 800) return 80;
+    if (agi >= 500) return 60;
+    if (agi >= 300) return 40;
     if (agi >= 100) return 25;
     return 0;
 }
 
+// =============================
+// ATAQUE
+// =============================
 function atacar() {
+    const selAtk = document.getElementById("atacante");
+    const selDef = document.getElementById("defensor");
+    const log = document.getElementById("log");
+    if (!selAtk.value || !selDef.value) return alert("Escolha atacante e defensor.");
+    if (selAtk.value === selDef.value) return alert("Escolha personagens diferentes!");
+
     const lista = getPersonagens();
-    const idAtk = Number(document.getElementById("atacante").value);
-    const idDef = Number(document.getElementById("defensor").value);
-    if (!idAtk || !idDef) { alert("Escolha atacante e defensor."); return; }
-    if (idAtk === idDef) { alert("Escolha personagens diferentes!"); return; }
+    const atk = lista.find(p => p.id == selAtk.value);
+    const def = lista.find(p => p.id == selDef.value);
 
-    const atk = lista.find(p => p.id === idAtk);
-    const def = lista.find(p => p.id === idDef);
-    if (!atk || !def) return alert("Personagem não encontrado.");
-    if (vidasBatalha[atk.id] <= 0 || vidasBatalha[def.id] <= 0) return alert("Um dos personagens está morto.");
+    const atkBuff = buffs[atk.id] || { dano:0, agilidade:0 };
+    const defBuff = buffs[def.id] || { vida:0, agilidade:0 };
 
-    const chance = chanceMitigacao(def.agilidade);
-    const ativou = Math.random() * 100 < chance;
-    let razao = (0.20 * def.agilidade) / (def.agilidade + atk.agilidade);
-    let danoRecebido = ativou ? atk.dano * (1 - razao) : atk.dano;
-    const danoFinal = arredondarEspecial(danoRecebido);
+    const atkDano = atk.dano + atkBuff.dano;
+    const atkAgi = atk.agilidade + atkBuff.agilidade;
+    const defAgi = def.agilidade + defBuff.agilidade;
+
+    const chance = chanceMitigacao(defAgi);
+    const mitigou = Math.random()*100 < chance;
+    const razao = (0.2*defAgi)/(defAgi + atkAgi);
+    const danoFinal = Math.round(mitigou ? atkDano*(1-razao) : atkDano);
 
     vidasBatalha[def.id] -= danoFinal;
     if (vidasBatalha[def.id] < 0) vidasBatalha[def.id] = 0;
 
-    const log = document.getElementById("log");
-    log.innerHTML = 
-        `--- ATAQUE ---\n${atk.nome} atacou ${def.nome}\n` +
-        `Mitigação: ${ativou ? "SIM" : "NÃO"} (${chance}%)\n` +
-        `Dano final: ${danoFinal}\nVida restante: ${vidasBatalha[def.id]}\n\n` + log.innerHTML;
+    const vidaComBuff = vidasBatalha[def.id] + defBuff.vida;
+    log.innerHTML =
+`--- ATAQUE ---
+${atk.nome} atacou ${def.nome}
+Chance de mitigação: ${chance}%
+Mitigação ativada? ${mitigou ? "SIM" : "NÃO"}
+Dano final aplicado: ${danoFinal}
+Vida restante do defensor: ${vidaComBuff} (Buff: ${defBuff.vida})
+` + log.innerHTML;
+
+    sessionStorage.setItem("vidasBatalha", JSON.stringify(vidasBatalha));
+    sessionStorage.setItem("logBatalha", log.innerHTML);
 
     carregarPersonagens();
+    atualizarListaBuffs();
 }
 
+// =============================
+// RESETAR BATALHA
+// =============================
 function resetarBatalha() {
     vidasBatalha = {};
-    getPersonagens().forEach(p => vidasBatalha[p.id] = Number(p.vida));
+    buffs = {};
     document.getElementById("log").innerHTML = "";
+    sessionStorage.removeItem("vidasBatalha");
+    sessionStorage.removeItem("logBatalha");
+    localStorage.removeItem("buffsFluxo");
     carregarPersonagens();
+    atualizarListaBuffs();
+}
+
+// =============================
+// BUFFS / NERFS
+// =============================
+function aplicarBuff(id, efeito) {
+    if (!buffs[id]) buffs[id] = { dano:0, vida:0, agilidade:0 };
+    buffs[id].dano += efeito.dano || 0;
+    buffs[id].vida += efeito.vida || 0;
+    buffs[id].agilidade += efeito.agilidade || 0;
+
+    localStorage.setItem("buffsFluxo", JSON.stringify(buffs));
+
+    carregarPersonagens();
+    atualizarListaBuffs();
+}
+
+function removerBuff(id) {
+    delete buffs[id];
+    localStorage.setItem("buffsFluxo", JSON.stringify(buffs));
+
+    carregarPersonagens();
+    atualizarListaBuffs();
+}
+
+// =============================
+// PAINEL DINÂMICO
+// =============================
+function atualizarDropdownBuffs() {
+    const sel = document.getElementById("selPersonagem");
+    sel.innerHTML = "";
+    getPersonagens().forEach(p => {
+        sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`;
+    });
+}
+
+function aplicarBuffDoPainel() {
+    const id = Number(document.getElementById("selPersonagem").value);
+    const dano = Number(document.getElementById("inputDano").value);
+    const vida = Number(document.getElementById("inputVida").value);
+    const agi = Number(document.getElementById("inputAgi").value);
+    aplicarBuff(id, { dano, vida, agilidade: agi });
+
+    document.getElementById("inputDano").value = 0;
+    document.getElementById("inputVida").value = 0;
+    document.getElementById("inputAgi").value = 0;
+}
+
+// =============================
+// LISTA DE BUFFS
+// =============================
+function atualizarListaBuffs() {
+    const container = document.getElementById("buffsAtivos");
+    container.innerHTML = "";
+    Object.keys(buffs).forEach(id => {
+        const p = getPersonagens().find(x=>x.id==id);
+        if (!p) return;
+        const div = document.createElement("div");
+        div.style.marginBottom="8px";
+        div.innerHTML = `<strong>${p.nome}</strong> | ❤️ ${buffs[id].vida} ⚔️ ${buffs[id].dano} ⚡ ${buffs[id].agilidade} 
+        <button class="btn" style="background:#c62828;width:auto;padding:5px 10px;margin-left:10px;" onclick="removerBuff(${id})">Remover</button>`;
+        container.appendChild(div);
+    });
 }
 
 // =============================
@@ -146,34 +256,46 @@ function resetarBatalha() {
 // =============================
 function rolarD6() {
     const img = document.getElementById("d6-img");
-    img.src = "rolando_d6.gif";
-    setTimeout(() => {
-        const n = Math.floor(Math.random() * 6) + 1;
-        img.src = `d6_${n}.png`;
+    img.src="rolando_d6.gif";
+    setTimeout(()=>{ 
+        const n=Math.floor(Math.random()*6)+1;
+        img.src=`d6_${n}.png`;
         document.getElementById("historico").innerHTML += `D6: ${n}<br>`;
-    }, 900);
+    },900);
 }
 
 function rolarD20() {
-    const img = document.getElementById("d20-img");
-    const num = document.getElementById("d20-numero");
-    num.innerText = "";
-    img.src = "rolando_d20.gif";
-    setTimeout(() => {
-        const n = Math.floor(Math.random() * 20) + 1;
-        img.src = "dado_d20.png";
-        num.innerText = n;
+    const img=document.getElementById("d20-img");
+    const num=document.getElementById("d20-numero");
+    num.innerText="";
+    img.src="rolando_d20.gif";
+    setTimeout(()=>{
+        const n=Math.floor(Math.random()*20)+1;
+        img.src="dado_d20.png";
+        num.innerText=n;
         document.getElementById("historico").innerHTML += `D20: ${n}<br>`;
-    }, 900);
+    },900);
 }
 
-function limparHistorico() {
-    document.getElementById("historico").innerHTML = "";
-}
+function limparHistorico(){document.getElementById("historico").innerHTML="";}
 
-carregarPersonagens();
+// =============================
+// INIT
+// =============================
+document.addEventListener("DOMContentLoaded",()=>{
+    const vidasSalvas=sessionStorage.getItem("vidasBatalha");
+    if(vidasSalvas) vidasBatalha=JSON.parse(vidasSalvas);
+
+    const buffsSalvos=localStorage.getItem("buffsFluxo");
+    if(buffsSalvos) buffs=JSON.parse(buffsSalvos);
+
+    carregarPersonagens();
+    atualizarDropdownBuffs();
+    atualizarListaBuffs();
+
+    const logSalvo=sessionStorage.getItem("logBatalha");
+    if(logSalvo) document.getElementById("log").innerHTML=logSalvo;
+});
 </script>
-
 </body>
 </html>
-
