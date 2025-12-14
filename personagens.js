@@ -1,36 +1,33 @@
-/* ============================================
-   BANCO DE DADOS LOCAL — Personagens
-   Usado em TODAS as páginas
-============================================ */
+const STORAGE_KEY = "personagens_custom";
 
 function getPersonagens() {
-    return JSON.parse(localStorage.getItem("db_personagens") || "[]");
+    let custom = [];
+    try { custom = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch {}
+    if(typeof PERSONAGENS_FIXOS === "undefined") { console.error("PERSONAGENS_FIXOS não carregado"); return custom; }
+    return [...PERSONAGENS_FIXOS, ...custom];
 }
 
-function salvarPersonagens(lista) {
-    localStorage.setItem("db_personagens", JSON.stringify(lista));
+function salvarCustom(lista) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
 }
 
-/* Criar personagem */
-function addPersonagem(p) {
-    const lista = getPersonagens();
-    p.id = Date.now(); // ID único
+function adicionarPersonagem(p) {
+    let lista = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    p.id = Date.now();
     lista.push(p);
-    salvarPersonagens(lista);
+    salvarCustom(lista);
 }
 
-/* Editar personagem */
-function updatePersonagem(id, novosDados) {
-    const lista = getPersonagens();
-    const idx = lista.findIndex(x => x.id === id);
-    if (idx >= 0) {
-        lista[idx] = { ...lista[idx], ...novosDados };
-        salvarPersonagens(lista);
-    }
+function editarPersonagem(id, dados) {
+    let lista = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const i = lista.findIndex(p => p.id===id);
+    if(i===-1) return;
+    lista[i] = { ...lista[i], ...dados };
+    salvarCustom(lista);
 }
 
-/* Excluir personagem */
-function deletePersonagem(id) {
-    let lista = getPersonagens().filter(p => p.id !== id);
-    salvarPersonagens(lista);
+function removerPersonagem(id) {
+    let lista = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    lista = lista.filter(p => p.id!==id);
+    salvarCustom(lista);
 }
